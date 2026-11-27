@@ -1,0 +1,4 @@
+deploy-test
+created: 2026-11-27 (test of the GitHub Actions -> SiteGround pipeline)
+purpose: prove whether a push to the production branch changes the live site,
+         and whether only changed files are transferred or every file is rewritten.
