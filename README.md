@@ -8,7 +8,7 @@ date, so the site can make claims a comparison shopper can actually check.
 | | |
 |---|---|
 | **Live site** | <https://anuranjanv19.sg-host.com> |
-| **Repository** | `RishuBurnwal/OxygenCareCompare` (private) |
+| **Repository** | `RishuBurnwal/OxygenCareCompare` (public) |
 | **Platform** | WordPress 6.6+ on PHP 8.3 |
 | **Theme** | `compareoxygen` 1.0.0 |
 | **Core plugin** | `coc-core` 0.2.0 |
