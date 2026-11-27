@@ -1,0 +1,19 @@
+.env
+.env.*
+!.env.example
+.local/
+__pycache__/
+*.py[cod]
+
+# local deploy material (SSH keys, notes) - never published
+.deploy/
+.monkeycode/
+.ohmyagent/
+.claude/
+graphify-out/
+memory/
+project-audit/
+
+# local artifacts
+*.docx
+*.log

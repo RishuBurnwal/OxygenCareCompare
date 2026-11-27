@@ -1,0 +1,48 @@
+services:
+  database:
+    image: mariadb:11.4.13
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${WP_DB_NAME:-compareoxygen}
+      MARIADB_USER: ${WP_DB_USER:-compareoxygen}
+      MARIADB_PASSWORD: ${WP_DB_PASSWORD:?Set WP_DB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${WP_DB_ROOT_PASSWORD:?Set WP_DB_ROOT_PASSWORD in .env}
+    volumes:
+      - database_data:/var/lib/mysql
+    networks:
+      - wordpress_private
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  wordpress:
+    image: wordpress:7.1.5-php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WP_PORT:-8080}:80"
+    environment:
+      WORDPRESS_DB_HOST: database:3306
+      WORDPRESS_DB_NAME: ${WP_DB_NAME:-compareoxygen}
+      WORDPRESS_DB_USER: ${WP_DB_USER:-compareoxygen}
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD:?Set WP_DB_PASSWORD in .env}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_ENVIRONMENT_TYPE', 'local');
+        define('DISALLOW_FILE_EDIT', true);
+    volumes:
+      - wordpress_core:/var/www/html
+      - ./wp-content:/var/www/html/wp-content
+    networks:
+      - wordpress_private
+
+volumes:
+  database_data:
+  wordpress_core:
+
+networks:
+  wordpress_private:
+    internal: true

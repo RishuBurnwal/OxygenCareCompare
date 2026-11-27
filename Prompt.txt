@@ -1,0 +1,1617 @@
+# MASTER DEVELOPMENT PROMPT — COMPAREOXYGENCONCENTRATORS.COM
+
+## ROLE
+
+Act as a senior WordPress architect, PHP developer, UI/UX designer, 3D web experience designer, SEO architect, accessibility engineer, performance engineer, security engineer, and QA automation specialist.
+
+You are responsible for designing, developing, testing, and preparing a complete production-ready website for:
+
+**Project:** CompareOxygenConcentrators.com
+
+This is not a generic WordPress blog or a simple landing page. It is a standalone portable oxygen concentrator research, product comparison, review, and buying-guidance platform.
+
+Your job is to build a polished, premium, modern, interactive, visually impressive website while strictly preserving the approved technical architecture.
+
+Do not merely generate a visual mockup. Implement the actual working website, backend, database structures, admin experience, frontend templates, comparison functionality, SEO architecture, analytics integration, security controls, and documentation.
+
+---
+
+# 1. FIRST: INSPECT THE COMPLETE PROJECT
+
+Before writing or modifying any code:
+
+1. Inspect the entire existing workspace and directory structure.
+2. Locate and read these project documents if available:
+   - `CompareOxygenConcentrators - MVP.docx`
+   - `CompareOxygenConcentrators.docx`
+3. Read every relevant section, requirement, page specification, architecture recommendation, and non-negotiable rule.
+4. Inspect all existing source code, images, logos, fonts, design references, configuration files, and documentation.
+5. Identify whether WordPress is already installed or whether this is a fresh development workspace.
+6. Identify the available PHP version, WordPress version, database environment, and available testing tools.
+7. Do not overwrite or delete existing project files without understanding their purpose.
+8. Do not replace existing working functionality just because you prefer a different implementation.
+9. Identify missing information and distinguish between:
+   - Confirmed requirements
+   - Technical assumptions
+   - Pending decisions
+   - External dependencies
+
+Create these documents before implementation:
+
+- `PROJECT_AUDIT.md`
+- `IMPLEMENTATION_PLAN.md`
+- `TECHNICAL_ARCHITECTURE.md`
+- `DESIGN_SYSTEM.md`
+- `QA_TEST_PLAN.md`
+- `DECISIONS_REQUIRED.md`
+
+Do not silently invent business decisions.
+
+If the two project documents contain conflicting instructions, identify the conflict and record it in `DECISIONS_REQUIRED.md`. For example, the MVP document specifies 30 public pages, while the technical SOP also discusses a quality-first launch of approximately 12–18 useful pages. Preserve the specified page architecture, but do not invent content or silently decide the final publishing scope.
+
+After completing the audit and plan, proceed with implementation in logical phases. Do not stop after producing documentation.
+
+---
+
+# 2. PROJECT PURPOSE AND BUSINESS MODEL
+
+The website must operate as an independent consumer research platform for portable oxygen concentrators.
+
+It is not:
+
+- An Oxygen Care Supply website redesign.
+- A WooCommerce store.
+- A simple affiliate bridge page.
+- A generic WordPress blog.
+- An AI-generated SEO page factory.
+- A clone of Oxygen Care Supply.
+- A website whose only purpose is redirecting visitors elsewhere.
+
+The intended customer journey is:
+
+Google Ads / Organic Search  
+→ CompareOxygenConcentrators.com  
+→ Research / Compare / Review  
+→ Oxygen Care Supply  
+→ Product / Call / Checkout  
+→ Sale
+
+The website must offer meaningful independent value even when a visitor does not click through to Oxygen Care Supply.
+
+Primary objectives:
+
+1. Help visitors understand portable oxygen concentrators.
+2. Help users compare different models using reliable specifications.
+3. Publish detailed product reviews and buying guides.
+4. Establish topical authority through useful editorial content.
+5. Generate qualified leads and commercial referrals for Oxygen Care Supply.
+6. Measure whether the research journey improves acquisition and conversion performance.
+7. Create an architecture that can scale to hundreds of useful pages without duplicating product data.
+
+---
+
+# 3. ABSOLUTE TECHNICAL STACK REQUIREMENTS
+
+These requirements are mandatory.
+
+## Approved stack
+
+Use:
+
+- WordPress
+- PHP
+- MySQL/MariaDB
+- Native Gutenberg/block editor
+- Custom lightweight WordPress theme
+- Custom WordPress functionality plugin
+- HTML5
+- Modern CSS3
+- Vanilla JavaScript
+- WordPress REST API or AJAX only when genuinely required
+- Git and GitHub
+- Google Analytics 4
+- Google Tag Manager
+- Google Search Console
+- Yoast SEO or one equivalent mature SEO plugin
+- ACF Pro only if a valid license is available and it provides genuine value.
+
+## Strict no-build deployment requirement
+
+The production website must run on ordinary PHP-compatible hosting.
+
+The production server must NOT require:
+
+- Node.js runtime
+- TypeScript runtime
+- React
+- Next.js
+- Vue
+- Vite
+- Webpack
+- npm installation
+- npm run build
+- Server-side JavaScript processes
+- Runtime transpilation
+- JavaScript build pipelines
+- A separate frontend application server
+
+I want ready-to-deploy files.
+
+The deployment workflow should be:
+
+Local development  
+→ GitHub  
+→ Staging PHP hosting  
+→ QA  
+→ Production PHP hosting
+
+The uploaded website must run directly using WordPress, PHP, MySQL, CSS, HTML, and browser-compatible JavaScript.
+
+Prefer no build process anywhere in the project.
+
+If a tool absolutely requires a local build process, do not introduce it without documenting the reason and asking for approval. Never make production hosting dependent on that build process.
+
+## JavaScript and 3D library compatibility
+
+Three.js and GSAP may be used only through production-compatible browser distributions.
+
+Requirements:
+
+- Prefer pinned, browser-compatible UMD/IIFE distributions where available.
+- Prefer local static vendor files for production reliability.
+- CDN use must be optional and must not break the website when unavailable.
+- Do not introduce module-only dependencies that require a bundler.
+- Do not use React Three Fiber or other React-dependent 3D packages.
+- Do not require npm to install or run the website.
+- Check the exact library distribution before integration.
+- Include appropriate licensing and third-party notices.
+
+If a particular skill recommends React, TypeScript, Vite, or a Node build pipeline, adapt its design concepts to the approved PHP and Vanilla JavaScript architecture instead.
+
+## Prohibited technologies unless explicitly approved
+
+- WooCommerce
+- Elementor
+- Divi
+- WPBakery
+- React frontend
+- Next.js
+- Vue
+- Headless WordPress
+- Laravel
+- Shopify
+- Large JavaScript UI frameworks
+- Multiple SEO plugins
+- Multiple schema plugins
+- Generic comparison-table plugins
+
+Do not introduce unnecessary dependencies.
+
+---
+
+# 4. REQUIRED CODE ARCHITECTURE
+
+Create two independent components:
+
+## A. Custom WordPress theme
+
+Theme name:
+
+`compareoxygen`
+
+Its responsibility is presentation only.
+
+Suggested structure:
+
+```text
+wp-content/
+└── themes/
+    └── compareoxygen/
+        ├── assets/
+        │   ├── css/
+        │   ├── js/
+        │   ├── images/
+        │   ├── models/
+        │   ├── fonts/
+        │   └── vendor/
+        ├── blocks/
+        ├── inc/
+        │   ├── setup.php
+        │   ├── enqueue.php
+        │   ├── navigation.php
+        │   └── helpers.php
+        ├── template-parts/
+        │   ├── cards/
+        │   ├── comparison/
+        │   ├── review/
+        │   ├── disclosure/
+        │   └── cta/
+        ├── templates/
+        ├── header.php
+        ├── footer.php
+        ├── functions.php
+        ├── index.php
+        ├── single.php
+        ├── archive.php
+        ├── page.php
+        └── style.css
+```
+
+## B. Custom functionality plugin
+
+Plugin name:
+
+`coc-core`
+
+Its responsibility is business logic, product data, comparison functionality, SEO-related custom logic, tracking, and administrative functionality.
+
+Suggested structure:
+
+```text
+wp-content/
+└── plugins/
+    └── coc-core/
+        ├── coc-core.php
+        ├── includes/
+        │   ├── post-types/
+        │   ├── taxonomies/
+        │   ├── fields/
+        │   ├── comparison/
+        │   ├── tracking/
+        │   ├── attribution/
+        │   ├── schema/
+        │   ├── seo/
+        │   ├── admin/
+        │   └── utilities/
+        ├── assets/
+        │   ├── css/
+        │   └── js/
+        ├── languages/
+        └── readme.txt
+```
+
+The theme must not contain essential business logic.
+
+The plugin must not control visual presentation unnecessarily.
+
+Changing the theme must not destroy product data or comparison records.
+
+---
+
+# 5. DESIGN DIRECTION — PREMIUM, MODERN AND IMMERSIVE
+
+The website should look like a premium consumer technology research platform.
+
+It should not look like an ordinary medical equipment catalogue or an outdated WordPress blog.
+
+Create an original visual identity.
+
+Do not blindly copy Apple, Dyson, medical equipment websites, or other competitors. Study their visual principles and create an original design.
+
+## Design qualities
+
+- Premium and trustworthy
+- Modern editorial design
+- Clean typography
+- Strong visual hierarchy
+- Excellent whitespace
+- Carefully designed product cards
+- Elegant transitions
+- High-quality photography
+- Subtle depth and dimensionality
+- Purposeful 3D elements
+- Smooth scrolling interactions
+- Clear comparison layouts
+- Excellent mobile experience
+- Accessible controls and typography
+
+The visual experience should communicate precision, reliability, clarity, and confidence.
+
+## Suggested design direction
+
+Use a restrained combination of:
+
+- Premium editorial layouts
+- Modern technology aesthetics
+- Clean medical-product presentation
+- Subtle glass or layered surfaces where appropriate
+- Soft shadows and dimensional product cards
+- High-quality product photography
+- Carefully selected accent colors
+- Consistent spacing and typography
+
+Avoid excessive glassmorphism, random gradients, excessive rounded cards, distracting animations, and generic AI-generated website aesthetics.
+
+Create a complete design system before implementing individual pages.
+
+The design system must define:
+
+- Color tokens
+- Typography scale
+- Font families
+- Spacing system
+- Container widths
+- Grid system
+- Border styles
+- Shadows
+- Buttons
+- Forms
+- Cards
+- Navigation
+- Responsive breakpoints
+- Animation timing
+- Focus states
+- Component states
+
+---
+
+# 6. REQUIRED GITHUB AGENT SKILLS
+
+Before designing and coding, inspect the following repositories and their relevant `SKILL.md` files.
+
+Use the narrowest relevant skills instead of loading unrelated material.
+
+## Primary 3D skills
+
+1. Three.js Skills:
+   https://github.com/cesartevisual/threejs-skills
+
+   Study relevant skills:
+   - threejs-web
+   - threejs-scene
+   - threejs-geometry
+   - threejs-materials
+   - threejs-lighting
+   - threejs-assets
+   - threejs-animation
+   - threejs-interaction
+   - threejs-shaders
+   - threejs-html
+   - threejs-accessibility
+   - threejs-performance
+   - threejs-debugging
+   - threejs-testing
+
+2. Open 3D Skills:
+   https://github.com/Moh4696/open-3d-skills
+
+   Study relevant skills:
+   - threejs-scene
+   - scroll-film
+   - exploded-view
+   - motion-assets
+   - alpha-cutout
+
+   Important: Adapt these workflows to plain browser-compatible JavaScript. Do not introduce a mandatory Node.js build pipeline or incompatible module system.
+
+## Frontend design and interaction skills
+
+3. RCS Frontend Skill:
+   https://github.com/RitvikChunamari/rcs-frontend-skill
+
+   Study relevant areas:
+   - Art direction
+   - Design systems
+   - UI/UX
+   - Responsive layouts
+   - Motion systems
+   - 3D experiences
+   - Accessibility
+   - Visual QA
+   - Performance
+
+   Do not use React-specific implementation recommendations.
+
+4. Three.js-Skills:
+   https://github.com/mitechell/Three.js-Skills
+
+   Study relevant areas:
+   - Web design workflows
+   - Interaction design
+   - Animation
+   - UI inspiration
+   - Visual reference analysis
+
+## Skill usage rules
+
+- Inspect the actual repository before using a skill.
+- Read the relevant `SKILL.md` and any important linked references.
+- Check license and compatibility.
+- Do not assume a repository is maintained or compatible merely because it exists.
+- Do not copy a complete website or proprietary design.
+- Do not blindly follow React, TypeScript, Node.js, or bundler recommendations.
+- Adapt all techniques to the approved project architecture.
+- Keep the project-specific instructions in `AGENTS.md`.
+- Record which skills were actually inspected and used in `SKILLS_USED.md`.
+- If a skill cannot be accessed, record that fact and continue with sound engineering practices.
+
+If skill installation is necessary, use Codex-compatible project-local skill locations such as `.agents/skills/` where appropriate. Skill installation must not become a production dependency.
+
+---
+
+# 7. 3D WEBSITE EXPERIENCE
+
+The website should have memorable, high-quality 3D interactions, but 3D must serve the product research experience.
+
+Do not turn every section into a 3D animation.
+
+## A. Homepage hero
+
+Create an impressive homepage hero with:
+
+- Premium headline
+- Clear explanation of the platform
+- Primary comparison CTA
+- Secondary research CTA
+- Visually strong product presentation
+- Subtle dimensional movement
+- Responsive composition
+
+Where genuine product assets are available, use them.
+
+If no verified 3D product model is available, use an elegant CSS/SVG or photographic fallback. Do not fabricate a supposedly accurate model of a real oxygen concentrator.
+
+## B. Interactive product viewer
+
+Build an optional reusable product-viewer component.
+
+Where a verified GLB/GLTF or suitable 3D asset is provided, support:
+
+- Rotate
+- Zoom
+- Reset view
+- Drag interaction
+- Touch interaction
+- Loading state
+- Error state
+- Static image fallback
+- Keyboard-accessible controls
+
+Do not claim that a model is an exact representation unless its source and accuracy have been verified.
+
+## C. Exploded product view
+
+Where an authentic model supports it, create an exploded-view interaction to explain product components.
+
+Potential presentation:
+
+- Main housing
+- Battery
+- Control interface
+- Air intake and output areas
+- Other verified external components
+
+Never invent internal engineering details or medical functionality.
+
+## D. 3D oxygen-flow visualization
+
+Create an educational visual explaining oxygen concentrator operation only when the underlying information is reliable.
+
+Keep explanatory content visible as ordinary HTML text. The visualization must not be the only source of information.
+
+## E. Scroll storytelling
+
+Use scroll-based transitions selectively:
+
+- Product introduction
+- Feature highlights
+- Comparison explanations
+- Technical education
+- Editorial storytelling
+
+Use GSAP/ScrollTrigger only when justified and compatible with the no-build deployment architecture.
+
+## F. Motion and interaction
+
+Use subtle, polished interactions:
+
+- Card hover depth
+- Smooth tab transitions
+- Animated comparison highlights
+- Scroll reveals
+- Button micro-interactions
+- Sticky comparison controls
+- Progressive loading transitions
+
+Every essential animation must have a usable static alternative.
+
+## G. Performance and accessibility
+
+- Respect `prefers-reduced-motion`.
+- Provide a fallback when WebGL is unavailable.
+- Do not force 3D loading on low-powered mobile devices.
+- Avoid unnecessary real-time rendering.
+- Stop animation loops when scenes are not visible.
+- Dispose of geometries, textures, materials, and renderers correctly.
+- Use quality tiers for capable and low-powered devices.
+- Avoid excessive post-processing.
+- Ensure all important actions remain usable without 3D.
+
+---
+
+# 8. INFORMATION ARCHITECTURE AND MVP PAGES
+
+Implement the page architecture specified in the MVP document.
+
+Expected public page structure:
+
+```text
+/
+├── /compare/
+├── /best/
+│   ├── /best/portable-oxygen-concentrators/
+│   ├── /best/lightweight-portable-oxygen-concentrators/
+│   ├── /best/portable-oxygen-concentrators-for-travel/
+│   └── /best/portable-oxygen-concentrators-for-battery-life/
+├── /guides/
+│   └── /guides/how-to-choose-a-portable-oxygen-concentrator/
+├── /reviews/
+│   ├── /reviews/inogen-rove-6/
+│   ├── /reviews/inogen-rove-4/
+│   ├── /reviews/oxygo-next/
+│   ├── /reviews/oxygo-fit-plus/
+│   ├── /reviews/caire-freestyle-comfort/
+│   └── /reviews/arya-go/
+├── /comparisons/
+│   ├── /comparisons/inogen-rove-6-vs-oxygo-next/
+│   ├── /comparisons/inogen-rove-6-vs-inogen-rove-4/
+│   ├── /comparisons/inogen-rove-6-vs-caire-freestyle-comfort/
+│   ├── /comparisons/oxygo-next-vs-caire-freestyle-comfort/
+│   └── /comparisons/inogen-rove-4-vs-oxygo-fit-plus/
+├── /brands/
+│   ├── /brands/inogen/
+│   ├── /brands/oxygo/
+│   ├── /brands/caire/
+│   └── /brands/arya/
+├── /how-we-rate/
+├── /editorial-policy/
+├── /disclosure/
+├── /about/
+└── /contact/
+
+Utility pages:
+├── /privacy-policy/
+└── /terms/
+```
+
+The page count and publishing scope must follow the final approved business decision.
+
+Do not create empty pages just to fill the sitemap.
+
+Do not automatically publish all possible product combinations.
+
+Every indexable page must provide genuine user value.
+
+## Main navigation
+
+Desktop navigation:
+
+- Compare
+- Best POCs
+- Reviews
+- Comparisons
+- Guides
+- Brands
+- About
+
+Primary CTA:
+
+**Compare Concentrators**
+
+Do not use "Shop Now" as the primary global CTA.
+
+Design a responsive mobile navigation with accessible controls.
+
+---
+
+# 9. HOMEPAGE REQUIREMENTS
+
+Build a complete homepage, not just a hero section.
+
+Suggested sections:
+
+1. Premium hero
+2. Search or comparison entry point
+3. Featured portable oxygen concentrators
+4. Compare popular models
+5. Best-of buying guides
+6. How the comparison platform works
+7. Product education section
+8. Important features explained
+9. Research methodology/trust section
+10. Editorial content
+11. Frequently asked questions where genuinely useful
+12. Final comparison CTA
+13. Complete footer with disclosure and important links
+
+The homepage should immediately explain:
+
+- What the website does
+- What products visitors can compare
+- How users can research products
+- Why the information is useful
+- How the comparison process works
+
+Do not make unsupported claims such as "the world's most trusted experts".
+
+---
+
+# 10. STRUCTURED PRODUCT DATABASE
+
+This is one of the most important parts of the project.
+
+Create a custom post type:
+
+`poc_model`
+
+Create a brand taxonomy.
+
+Example models for initial development:
+
+- Inogen Rove 6
+- Inogen Rove 4
+- OxyGo NEXT
+- OxyGo Fit Plus
+- CAIRE FreeStyle Comfort
+- ARYA Go
+- ARYA Mini
+
+These are initial data examples, not permission to invent specifications.
+
+## Product data fields
+
+### Identity
+
+- Brand
+- Model
+- Manufacturer
+- MPN
+- Product status
+- Launch year
+- Product image
+- Official manufacturer URL
+
+### Physical specifications
+
+- Weight
+- Width
+- Height
+- Depth
+
+### Oxygen specifications
+
+- Delivery type
+- Pulse settings
+- Maximum oxygen output
+- Oxygen concentration
+
+### Battery
+
+- Standard battery runtime
+- Extended battery runtime
+- Recharge time
+- Battery options
+- Battery weight
+
+### Travel
+
+- FAA approval/status
+- AC charging
+- DC charging
+- External charger availability
+
+### Operation
+
+- Noise level
+- Operating altitude
+- Operating temperature
+- Display type
+
+### Warranty
+
+- Device warranty
+- Battery warranty
+
+### Editorial
+
+- Best for
+- Advantages
+- Disadvantages
+- Editorial rating, if approved and genuinely supported
+- Rating methodology
+- Last fact-checked date
+- Sources
+- Reviewer
+
+### Commercial
+
+- OCS product URL
+- Manufacturer URL
+- CTA label
+- Product availability
+
+## Source management
+
+Important specifications must be traceable.
+
+For each specification, where possible, store:
+
+- Source name
+- Source URL
+- Source type
+- Verification date
+- Notes
+- Verified/unverified status
+
+Never invent product specifications.
+
+If a value is unavailable, show "Not confirmed" or another appropriate neutral label.
+
+Do not display fabricated product ratings, reviews, testimonials, product experience, or testing claims.
+
+Clearly distinguish:
+
+- Hands-on Tested
+- Editorially Reviewed
+- Manufacturer Specifications Reviewed
+
+Do not label a product as physically tested unless actual testing occurred.
+
+## Single source of truth
+
+Product specifications must be stored once and reused everywhere.
+
+For example:
+
+Add or update a product's weight once  
+→ Product review updates  
+→ Comparison pages update  
+→ Buying guides can reuse the data  
+→ Product cards remain accurate
+
+Never manually duplicate specification values across templates.
+
+---
+
+# 11. PRODUCT REVIEW SYSTEM
+
+Build a reusable product review template.
+
+Each review should support:
+
+- Product overview
+- Product images
+- Product specifications
+- Key features
+- Pros and cons
+- Editorial verdict
+- Best-for explanation
+- Limitations
+- Battery information
+- Portability
+- Travel information
+- Warranty
+- Source references
+- Reviewer information
+- Last fact-checked date
+- Related comparisons
+- Related buying guides
+- OCS CTA
+- Commercial disclosure
+- Medical information disclaimer
+
+Important:
+
+Do not automatically generate fake product experience.
+
+Do not invent hands-on testing.
+
+Do not fabricate customer ratings or testimonials.
+
+The editorial team must be able to edit review content through WordPress.
+
+---
+
+# 12. COMPARISON ENGINE
+
+Build a genuine comparison system.
+
+It must support:
+
+- Selecting two or more valid products where appropriate.
+- Product search.
+- Product selection.
+- Dynamic specification comparison.
+- Side-by-side comparison.
+- Clear difference highlighting.
+- Mobile-friendly presentation.
+- Missing-value handling.
+- Comparison reset.
+- Remove/replace product.
+- Shareable comparison URL where appropriate.
+- Canonical URL handling.
+- Approved editorial comparison pages.
+
+## Comparison design
+
+Desktop:
+
+- Clear product headers
+- Aligned specification rows
+- Highlighted differences
+- Grouped specification categories
+
+Mobile:
+
+- Readable stacked or horizontally navigable comparison
+- No broken layouts
+- No inaccessible controls
+- Important differences easy to identify
+
+Use accessible HTML tables with appropriate headers wherever tables are used.
+
+## SEO rules
+
+Every approved SEO comparison needs a permanent canonical URL.
+
+Do not allow:
+
+- Duplicate A-vs-B and B-vs-A pages
+- Unlimited indexable combinations
+- Filter-generated SEO spam
+- Query-string comparison pages to become indexable
+
+Do not automatically publish every comparison combination.
+
+---
+
+# 13. PRODUCT SEARCH AND FILTERING
+
+Implement lightweight search using WordPress functionality.
+
+Prioritize:
+
+- Product model
+- Brand
+- Comparison
+- Guide
+
+Potential filters:
+
+- Brand
+- Weight
+- Battery runtime
+- Delivery type
+- Other verified product attributes
+
+Filters must work correctly and remain usable on mobile.
+
+Internal search results and dynamic filter URLs should normally be noindex.
+
+Do not create thousands of indexable URL combinations.
+
+---
+
+# 14. BRAND PAGES
+
+Create reusable brand templates.
+
+Each brand page should support:
+
+- Brand overview
+- Brand logo/image where permitted
+- Available models
+- Related reviews
+- Comparisons
+- Manufacturer links
+- Relevant editorial content
+
+Use a taxonomy with additional structured fields where appropriate.
+
+Do not duplicate product information on brand pages.
+
+---
+
+# 15. BUYING GUIDES AND EDUCATIONAL CONTENT
+
+Build reusable editorial templates for:
+
+- Best portable oxygen concentrators
+- Lightweight portable oxygen concentrators
+- Portable oxygen concentrators for travel
+- Portable oxygen concentrators for battery life
+- How to choose a portable oxygen concentrator
+
+Guides should use real product records and reusable product components.
+
+Do not invent medical recommendations.
+
+Do not automatically generate medical-condition-specific recommendations.
+
+Avoid unsupported claims regarding treatment outcomes, suitability, or clinical benefits.
+
+---
+
+# 16. SEO ARCHITECTURE
+
+Implement technical SEO correctly.
+
+Every indexable page should support:
+
+- SEO title
+- Meta description
+- H1
+- Canonical URL
+- Robots setting
+- Open Graph metadata
+- Breadcrumbs
+- Appropriate schema
+- Featured image
+- Author
+- Published date
+- Modified date
+- Fact-checked date where applicable
+
+## Structured data
+
+Use only schema appropriate to the actual visible content.
+
+Potential schema types:
+
+- Organization
+- WebSite
+- BreadcrumbList
+- Article
+- Product
+- Review
+
+Product and Review schema must meet applicable search-engine requirements.
+
+Never fabricate:
+
+- Aggregate ratings
+- Review counts
+- Customer reviews
+- Testimonials
+
+Structured data must match visible content.
+
+Do not add invisible SEO-only statements.
+
+## Indexing rules
+
+Normally noindex:
+
+- Search results
+- Filter URLs
+- Dynamic comparison query strings
+- Draft comparisons
+- PPC test variations unless specifically approved
+
+Only published, canonical, indexable pages should enter the XML sitemap.
+
+Implement:
+
+- Canonical rules
+- Robots rules
+- Sitemap controls
+- Breadcrumbs
+- Metadata
+- Schema
+- Redirect handling where required
+
+Avoid duplicate schema output from multiple plugins.
+
+---
+
+# 17. ANALYTICS AND OCS ATTRIBUTION
+
+Implement a reliable tracking architecture using:
+
+- Google Tag Manager
+- Google Analytics 4
+- dataLayer
+- Outbound click tracking
+- Cross-domain measurement
+- OCS attribution
+
+Track meaningful events such as:
+
+- Product viewed
+- Comparison started
+- Product added to comparison
+- Comparison completed
+- Filter used
+- Buying guide viewed
+- Review viewed
+- OCS outbound click
+- Contact form submission
+
+Create consistent event names and parameters.
+
+Where possible, include:
+
+- Product ID
+- Product name
+- Brand
+- Comparison ID
+- Page type
+- CTA location
+
+Do not expose secrets or API keys in frontend JavaScript.
+
+Do not break existing GA4/GTM configuration.
+
+Do not invent OCS domain settings or measurement IDs.
+
+Create documented configuration fields for values that must be supplied by the owner.
+
+Test cross-domain attribution using the actual approved domains and configuration.
+
+---
+
+# 18. TRUST, DISCLOSURE AND MEDICAL SAFETY
+
+The website discusses medical equipment.
+
+Create reusable components for:
+
+- Affiliate/commercial disclosure
+- Product information limitations
+- Medical disclaimer
+- Editorial methodology
+- Fact-checking information
+
+The website must not provide individualized medical treatment advice.
+
+Where appropriate, remind users to follow their healthcare provider's prescription and instructions.
+
+Do not convert technical specifications into unsupported clinical claims.
+
+Commercial disclosures must be visible near relevant recommendations.
+
+Build:
+
+- `/how-we-rate/`
+- `/editorial-policy/`
+- `/disclosure/`
+- `/about/`
+- `/contact/`
+- `/privacy-policy/`
+- `/terms/`
+
+Legal content should be clearly marked for appropriate review before publication.
+
+The contact page should support general inquiries and correction requests, and make clear that the site cannot provide individualized medical advice.
+
+---
+
+# 19. ACCESSIBILITY
+
+Accessibility is mandatory, not optional.
+
+Consider older users and people who may have limited technical familiarity.
+
+Implement:
+
+- Semantic HTML
+- Keyboard navigation
+- Visible focus states
+- Descriptive labels
+- Proper button/link semantics
+- Accessible forms
+- Readable contrast
+- Large touch targets
+- Screen-reader-friendly comparison tables
+- Accessible menus
+- Accessible tabs and accordions
+- Appropriate alt text
+- Reduced-motion support
+- Non-WebGL fallback
+
+Do not make important information available only through animation, color, hover, or 3D interactions.
+
+Aim for WCAG 2.2 AA practices wherever applicable.
+
+---
+
+# 20. PERFORMANCE AND CORE WEB VITALS
+
+The website must remain fast despite premium visuals.
+
+Performance requirements:
+
+- Mobile-first implementation
+- Server-render important content
+- Optimize images
+- Use WebP and AVIF where appropriate
+- Generate responsive image sizes
+- Lazy-load below-the-fold images
+- Do not lazy-load the primary LCP image incorrectly
+- Set image dimensions to reduce layout shift
+- Avoid unnecessary JavaScript
+- Avoid large framework bundles
+- Avoid excessive animation
+- Optimize CSS
+- Optimize 3D models and textures
+- Load 3D scenes only when needed
+- Use static fallbacks
+- Avoid unnecessary third-party scripts
+
+Aim for strong Core Web Vitals and Lighthouse performance, accessibility, SEO, and best-practice scores. A target near 90+ is desirable where realistically achievable, but do not sacrifice usability or genuine functionality for synthetic scores.
+
+---
+
+# 21. SECURITY
+
+Follow WordPress security best practices.
+
+Implement:
+
+- Nonces
+- Capability checks
+- Input sanitization
+- Output escaping
+- Prepared database queries
+- Secure form handling
+- Permission checks
+- Strong admin access practices
+- Least-privilege accounts
+- Protected secrets
+- Safe error handling
+
+Disable the WordPress file editor where appropriate.
+
+Never commit:
+
+- Passwords
+- API keys
+- Database credentials
+- Private tokens
+- wp-config.php secrets
+- Private database dumps
+- Production user data
+
+Do not expose API secrets in JavaScript.
+
+Use secure configuration and documented environment-specific settings.
+
+---
+
+# 22. WORDPRESS ADMIN EXPERIENCE
+
+The website must be manageable by a non-developer content/editorial team.
+
+Build an intuitive administration experience for:
+
+- Adding products
+- Editing products
+- Managing brands
+- Updating specifications
+- Adding source URLs
+- Recording verification dates
+- Creating reviews
+- Creating approved comparisons
+- Editing guides
+- Managing disclosures
+- Updating OCS product links
+
+Use native WordPress editing wherever practical.
+
+Do not force editors to edit PHP or JavaScript to update ordinary content.
+
+Ensure the admin interface is organized and understandable.
+
+If ACF Pro is unavailable, implement suitable native WordPress fields or custom metaboxes rather than assuming a license exists.
+
+---
+
+# 23. REUSABLE COMPONENTS
+
+Build reusable components for:
+
+- Header
+- Footer
+- Navigation
+- Product card
+- Product specification list
+- Comparison table
+- Comparison selector
+- Product viewer
+- Product review summary
+- Pros and cons
+- Editorial verdict
+- Brand card
+- Guide card
+- CTA
+- Disclosure
+- Medical disclaimer
+- Breadcrumbs
+- Author information
+- Source list
+- Related content
+- FAQ
+- Search
+- Filters
+
+Avoid duplicated markup and styles.
+
+All components must work responsively.
+
+---
+
+# 24. GIT AND DEPLOYMENT
+
+Use Git and GitHub.
+
+Recommended branches:
+
+- main
+- develop
+- feature/*
+- fix/*
+
+Example:
+
+- feature/product-database
+- feature/comparison-engine
+- feature/product-viewer
+- fix/mobile-navigation
+
+Repository should contain:
+
+- Custom theme
+- coc-core plugin
+- Documentation
+- Deployment instructions
+- Testing instructions
+- Configuration examples
+
+Do not commit:
+
+- wp-config.php secrets
+- uploads
+- private database dumps
+- cache
+- credentials
+
+Deployment must only update controlled application files.
+
+Never overwrite:
+
+- WordPress core
+- wp-config.php
+- uploads
+- Production database
+- Unrelated plugins
+- Existing user content
+
+Create a staging deployment procedure.
+
+Create backup and rollback instructions.
+
+Document the exact files that must be uploaded to production.
+
+---
+
+# 25. TESTING REQUIREMENT — TEST EVERY FEATURE
+
+A feature is not complete merely because it appears visually correct.
+
+For every implemented feature:
+
+1. Implement it.
+2. Run relevant tests.
+3. Check PHP errors.
+4. Check browser console errors.
+5. Check responsive behavior.
+6. Check keyboard accessibility.
+7. Check loading, empty, and error states.
+8. Verify database operations.
+9. Verify SEO output where relevant.
+10. Verify tracking where relevant.
+11. Fix discovered issues.
+12. Repeat the test.
+
+## Required QA areas
+
+### Functional QA
+
+- Navigation
+- Search
+- Filters
+- Product records
+- Product editing
+- Reviews
+- Comparisons
+- CTAs
+- Forms
+- Mobile menus
+- Product viewer
+- 3D fallback
+
+### WordPress QA
+
+- Theme activation
+- Plugin activation
+- Permalinks
+- Admin editing
+- Database persistence
+- Role/capability handling
+- Upgrade/deactivation behavior
+
+### SEO QA
+
+- Canonical tags
+- Metadata
+- Robots
+- Sitemap
+- Schema
+- Breadcrumbs
+- Internal links
+- Duplicate URLs
+
+### Analytics QA
+
+- dataLayer events
+- GA4 events
+- Outbound click tracking
+- Cross-domain attribution
+
+### Accessibility QA
+
+- Keyboard-only navigation
+- Focus visibility
+- Labels
+- Contrast
+- Screen-reader semantics
+- Reduced motion
+- Mobile touch controls
+
+### Performance QA
+
+- Image sizes
+- Lazy loading
+- JavaScript loading
+- 3D performance
+- Mobile performance
+- Core Web Vitals where measurable
+
+### Security QA
+
+- Input sanitization
+- Output escaping
+- Nonces
+- Capabilities
+- Secret handling
+- Form validation
+
+Use available tools such as PHP linting, WordPress debugging, browser testing, Playwright where compatible with the development environment, accessibility checks, and Lighthouse.
+
+Do not claim a test passed if it was not actually executed.
+
+If a test cannot be executed because the environment lacks WordPress, a database, browser automation, or another dependency, document the limitation and provide exact manual testing instructions.
+
+---
+
+# 26. IMPLEMENTATION PHASES
+
+Work in this sequence.
+
+## Phase 1 — Audit and planning
+
+- Inspect project
+- Read source documents
+- Inspect existing code
+- Identify conflicts
+- Prepare architecture
+- Prepare design system
+- Prepare QA plan
+
+## Phase 2 — WordPress foundation
+
+- Set up theme
+- Set up coc-core plugin
+- Configure basic templates
+- Configure navigation
+- Configure asset loading
+- Configure Git workflow
+
+## Phase 3 — Design system
+
+- Typography
+- Colors
+- Spacing
+- Buttons
+- Cards
+- Layouts
+- Responsive behavior
+- Interaction states
+
+## Phase 4 — Product database
+
+- Product CPT
+- Brand taxonomy
+- Specification fields
+- Source management
+- Admin interface
+- Test product records
+
+## Phase 5 — Core pages
+
+- Homepage
+- Compare utility
+- Product archive
+- Product detail/review
+- Brand pages
+- Buying guides
+- Editorial pages
+
+## Phase 6 — Comparison engine
+
+- Product selector
+- Comparison data
+- Dynamic specification rendering
+- Mobile comparison
+- Canonical comparison pages
+- Comparison QA
+
+## Phase 7 — Premium 3D and motion
+
+- 3D hero
+- Product viewer
+- Exploded view where verified assets exist
+- Scroll interactions
+- Micro-interactions
+- Static fallbacks
+- Mobile optimization
+
+## Phase 8 — SEO and trust
+
+- Metadata
+- Canonical
+- Schema
+- Sitemap
+- Robots
+- Disclosures
+- Editorial policy
+- Medical disclaimers
+
+## Phase 9 — Analytics
+
+- GTM
+- GA4
+- dataLayer
+- Outbound events
+- Cross-domain measurement
+- OCS attribution
+
+## Phase 10 — Full QA and release preparation
+
+- Functional tests
+- Responsive tests
+- Accessibility
+- SEO
+- Security
+- Performance
+- Staging validation
+- Deployment documentation
+- Rollback procedure
+
+Do not skip phases.
+
+Do not mark a phase complete without its required tests.
+
+---
+
+# 27. DEFINITION OF DONE
+
+The project is complete only when:
+
+- The custom theme works.
+- The coc-core plugin works.
+- Product data is structured.
+- Product specifications are reusable.
+- Product reviews work.
+- Comparison engine works.
+- Approved comparison pages work.
+- Brand pages work.
+- Editorial templates work.
+- Admin editing works.
+- Mobile experience works.
+- 3D experiences work where assets and device capabilities permit.
+- Static fallbacks work.
+- Accessibility has been checked.
+- SEO architecture is implemented.
+- Schema matches visible content.
+- GA4/GTM integration is configurable and tested.
+- OCS attribution is implemented and tested where credentials/configuration are available.
+- No fabricated product claims or reviews exist.
+- No PHP errors exist in tested flows.
+- No critical browser console errors exist in tested flows.
+- Performance has been checked.
+- Security practices have been implemented.
+- Staging QA passes.
+- Production deployment instructions are complete.
+- All production code is version controlled.
+
+---
+
+# 28. REQUIRED FINAL DELIVERABLES
+
+Provide a complete, organized project containing:
+
+1. `compareoxygen` WordPress theme
+2. `coc-core` WordPress plugin
+3. All required CSS, JavaScript, images, and static vendor assets
+4. Product database architecture
+5. Product administration interface
+6. Comparison engine
+7. Reusable editorial templates
+8. 3D components and fallbacks
+9. SEO implementation
+10. Analytics and attribution implementation
+11. Security implementation
+12. Responsive design
+13. Test documentation
+14. Deployment documentation
+15. Rollback documentation
+16. README
+17. `AGENTS.md`
+18. `PROJECT_AUDIT.md`
+19. `IMPLEMENTATION_PLAN.md`
+20. `TECHNICAL_ARCHITECTURE.md`
+21. `DESIGN_SYSTEM.md`
+22. `QA_TEST_PLAN.md`
+23. `SKILLS_USED.md`
+24. `DECISIONS_REQUIRED.md`
+
+The README must explain:
+
+- Project architecture
+- Requirements
+- Local WordPress setup
+- How to activate the theme
+- How to activate the plugin
+- How to add products
+- How to create comparisons
+- How to edit content
+- How to configure analytics
+- How to deploy to PHP hosting
+- How to test the website
+
+---
+
+# 29. FINAL INSTRUCTIONS TO CODEX
+
+Think like a senior engineer and product designer.
+
+Do not optimize for writing the most code. Optimize for a high-quality, maintainable, reliable product.
+
+Do not produce a generic template website.
+
+Do not use fake data as real product information.
+
+Do not use placeholder buttons that do nothing.
+
+Do not leave dead links or non-functional interactions.
+
+Do not generate empty sections merely to make the website look complete.
+
+Do not sacrifice accessibility for animation.
+
+Do not sacrifice SEO for client-side rendering.
+
+Do not sacrifice performance for 3D effects.
+
+Do not introduce Node.js, TypeScript, React, or a production build pipeline.
+
+Do not deploy untested code.
+
+Do not claim completion without evidence.
+
+When a requirement is unclear, document the assumption and ask for a decision when it affects business logic, data accuracy, branding, or production configuration.
+
+**The final goal is a premium, visually distinctive, 3D-enhanced, highly usable portable oxygen concentrator research and comparison platform that runs directly on standard PHP WordPress hosting without requiring a Node.js or TypeScript build on the production server.**
+
+Start by auditing the existing project and reading the source documents. Then create the plan and begin implementation.
