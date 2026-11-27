@@ -1,0 +1,424 @@
+name: Deploy to server on code update
+
+# main       -> staging (DEPLOY_PATH)                      automatic on push
+# production -> anuranjanv19.sg-host.com (DEPLOY_PATH_PROD) automatic on push
+#
+# Only wp-content/themes/compareoxygen is synced. WordPress core, plugins, uploads
+# and wp-config.php are never touched, and nothing is ever deleted unless git
+# deleted it.
+#
+# Production is only touched when someone merges into / pushes to the
+# `production` branch, so `main` stays the safe place to work.
+
+on:
+  push:
+    branches: [main, production]
+    paths-ignore:
+      - '.github/**'
+      - 'docs/**'
+      - 'qa/**'
+      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Where to deploy'
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      dry_run_only:
+        description: 'Only run the rsync dry-run (changes nothing)'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: deploy-oxygencarecompare-${{ github.ref_name }}-${{ inputs.target || 'push' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  THEME_DIR: wp-content/themes/compareoxygen
+
+jobs:
+  deploy_staging:
+    name: rsync deploy -> staging
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      WP_ROOT: ${{ secrets.DEPLOY_PATH || '/home/customer/www/staging.oxygencaresupply.com/public_html' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Report source
+        run: echo "branch=${GITHUB_REF_NAME} sha=${GITHUB_SHA::7} target=staging root=$WP_ROOT"
+
+      - name: Check required secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for v in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY; do
+            if [ -z "${!v:-}" ]; then missing="$missing $v"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing secrets:$missing"
+            exit 1
+          fi
+          echo "all required secrets are present"
+
+      - name: Guard - staging web root only
+        env:
+          WP_ROOT_PROD: ${{ secrets.DEPLOY_PATH_PROD || '/home/customer/www/anuranjanv19.sg-host.com/public_html' }}
+        run: |
+          set -euo pipefail
+          p="${WP_ROOT%/}"
+          case "$p" in
+            */public_html) ;;
+            *) echo "::error::staging root must end with /public_html (got: $p)"; exit 1 ;;
+          esac
+          case "$p" in
+            *staging*) ;;
+            *) echo "::error::staging root must contain 'staging' (got: $p)"; exit 1 ;;
+          esac
+          if [ "$p" = "${WP_ROOT_PROD%/}" ]; then
+            echo "::error::staging and production roots are identical"; exit 1
+          fi
+          echo "guard ok: $p"
+
+      - name: Install deploy SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_KNOWN_HOSTS_FINGERPRINT: ${{ secrets.SSH_KNOWN_HOSTS_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          PORT="${SSH_PORT:-18765}"
+          if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$PORT" -H "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+          if [ -n "${SSH_KNOWN_HOSTS_FINGERPRINT:-}" ]; then
+            if ! ssh-keygen -lf ~/.ssh/known_hosts | awk '{print $2}' | grep -qx "$SSH_KNOWN_HOSTS_FINGERPRINT"; then
+              echo "::error::SSH host key fingerprint mismatch - refusing to deploy."
+              ssh-keygen -lf ~/.ssh/known_hosts | awk '{print "  scanned:", $2}' || true
+              exit 1
+            fi
+          fi
+
+          cat > ~/.ssh/config <<EOF
+          Host sg-deploy
+            HostName $SSH_HOST
+            Port $PORT
+            User $SSH_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            StrictHostKeyChecking yes
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Verify SSH + WordPress theme root
+        run: |
+          set -euo pipefail
+          ssh sg-deploy 'echo "connected as $(whoami)"'
+          ssh sg-deploy "test -d '$WP_ROOT' && echo 'site root exists' || (echo '::error::site root missing'; exit 1)"
+          ssh sg-deploy "test -d '$WP_ROOT/wp-content/themes' && echo 'themes dir exists' || (echo '::error::wp-content/themes missing'; exit 1)"
+
+      - name: Git delta - theme files changed in this commit
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --deepen=1 origin >/dev/null 2>&1 || true
+          if git rev-parse -q --verify HEAD^ >/dev/null; then
+            git diff --name-status --no-renames HEAD^ HEAD > "$RUNNER_TEMP/raw.txt"
+          else
+            : > "$RUNNER_TEMP/raw.txt"
+          fi
+          awk -v d="$THEME_DIR/" 'index($2, d) == 1' "$RUNNER_TEMP/raw.txt" > "$RUNNER_TEMP/delta.txt"
+          cat "$RUNNER_TEMP/delta.txt" || true
+          echo "theme delta: added=$(grep -c '^A' "$RUNNER_TEMP/delta.txt" || true) changed=$(grep -c '^M' "$RUNNER_TEMP/delta.txt" || true) deleted=$(grep -c '^D' "$RUNNER_TEMP/delta.txt" || true)"
+
+      - name: Snapshot theme dir mtime (before)
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes sg-deploy "stat -c '%y  %n' '$WP_ROOT/$THEME_DIR'" > "$RUNNER_TEMP/mtime-before.txt" 2>&1 || true
+          cat "$RUNNER_TEMP/mtime-before.txt"
+
+      - name: Preflight - rsync dry-run
+        run: |
+          set -euo pipefail
+          rsync -az --checksum --no-times --omit-dir-times --dry-run --itemize-changes \
+            --exclude=node_modules/ \
+            -e "ssh -F $HOME/.ssh/config" \
+            "./$THEME_DIR/" "sg-deploy:$WP_ROOT/$THEME_DIR/"
+
+      - name: Apply deletions - theme files deleted in git are removed from the server
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          [ -s "$RUNNER_TEMP/delta.txt" ] || { echo "no theme delta - nothing to delete"; exit 0; }
+          while IFS=$'\t' read -r st path; do
+            [ "$st" = "D" ] || continue
+            target="$WP_ROOT/$path"
+            if ssh -o BatchMode=yes sg-deploy "test -e '$target'"; then
+              ssh -o BatchMode=yes sg-deploy "rm -f -- '$target'"
+              echo "REMOVED  $path"
+            else
+              echo "ABSENT   $path"
+            fi
+          done < "$RUNNER_TEMP/delta.txt"
+
+      - name: Deploy (rsync, no --delete)
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          rsync -az --checksum --no-times --omit-dir-times --stats \
+            --exclude=node_modules/ \
+            -e "ssh -F $HOME/.ssh/config" \
+            "./$THEME_DIR/" "sg-deploy:$WP_ROOT/$THEME_DIR/"
+
+      - name: Verify over SSH (repo hash vs server hash)
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/verify.txt"
+          rsync -rlc --dry-run --itemize-changes \
+            --exclude=node_modules/ \
+            -e "ssh -F $HOME/.ssh/config" \
+            "./$THEME_DIR/" "sg-deploy:$WP_ROOT/$THEME_DIR/" > "$out" || true
+          if grep -qE '^[<>ch]' "$out"; then
+            echo "::error::server still differs from repo after deploy"
+            awk '/^[<>ch]/{print; n++} n>=20{exit}' "$out"
+            exit 1
+          fi
+
+          f="$THEME_DIR/style.css"
+          [ -f "$f" ] || f="$(git ls-files "$THEME_DIR" | sed -n '1p')"
+          a=$(git show "HEAD:$f" | sha256sum | cut -d' ' -f1)
+          b=$(ssh sg-deploy "sha256sum '$WP_ROOT/$f' 2>/dev/null | cut -d' ' -f1" || true)
+          printf '  %-56s repo=%.16s  server=%.16s\n' "$f" "$a" "$b"
+          [ "$a" = "$b" ] || { echo "::error::spot-check hash mismatch"; exit 1; }
+          echo "OK - every deployed theme file matches the repo by checksum (verified over SSH)."
+
+      - name: Confirm theme dir untouched for unchanged content
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes sg-deploy "stat -c '%y  %n' '$WP_ROOT/$THEME_DIR'" > "$RUNNER_TEMP/mtime-after.txt" 2>&1 || true
+          cat "$RUNNER_TEMP/mtime-after.txt"
+          if diff -q "$RUNNER_TEMP/mtime-before.txt" "$RUNNER_TEMP/mtime-after.txt" >/dev/null; then
+            echo "OK - theme dir mtime unchanged"
+          else
+            echo "::warning::theme dir mtime changed - expected when files were added or removed"
+          fi
+
+      - name: Upload deploy log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-log-staging
+          path: |
+            ${{ runner.temp }}/verify.txt
+            ${{ runner.temp }}/delta.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deploy_production:
+    name: rsync deploy -> production
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/production') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'production')
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      WP_ROOT: ${{ secrets.DEPLOY_PATH_PROD || '/home/customer/www/anuranjanv19.sg-host.com/public_html' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Report source
+        run: echo "branch=${GITHUB_REF_NAME} sha=${GITHUB_SHA::7} target=production root=$WP_ROOT"
+
+      - name: Check required secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for v in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY; do
+            if [ -z "${!v:-}" ]; then missing="$missing $v"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing secrets:$missing"
+            exit 1
+          fi
+          echo "all required secrets are present"
+
+      - name: Guard - production web root only
+        env:
+          WP_ROOT_STAGING: ${{ secrets.DEPLOY_PATH || '/home/customer/www/staging.oxygencaresupply.com/public_html' }}
+        run: |
+          set -euo pipefail
+          p="${WP_ROOT%/}"
+          case "$p" in
+            */public_html) ;;
+            *) echo "::error::production root must end with /public_html (got: $p)"; exit 1 ;;
+          esac
+          case "$p" in
+            *staging*) echo "::error::production root must not contain 'staging' (got: $p)"; exit 1 ;;
+          esac
+          if [ "$p" = "${WP_ROOT_STAGING%/}" ]; then
+            echo "::error::staging and production roots are identical"; exit 1
+          fi
+          echo "guard ok: $p"
+
+      - name: Install deploy SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_KNOWN_HOSTS_FINGERPRINT: ${{ secrets.SSH_KNOWN_HOSTS_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          PORT="${SSH_PORT:-18765}"
+          if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$PORT" -H "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+          if [ -n "${SSH_KNOWN_HOSTS_FINGERPRINT:-}" ]; then
+            if ! ssh-keygen -lf ~/.ssh/known_hosts | awk '{print $2}' | grep -qx "$SSH_KNOWN_HOSTS_FINGERPRINT"; then
+              echo "::error::SSH host key fingerprint mismatch - refusing to deploy."
+              exit 1
+            fi
+          fi
+
+          cat > ~/.ssh/config <<EOF
+          Host sg-deploy
+            HostName $SSH_HOST
+            Port $PORT
+            User $SSH_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            StrictHostKeyChecking yes
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Verify SSH + WordPress theme root
+        run: |
+          set -euo pipefail
+          ssh sg-deploy 'echo "connected as $(whoami)"'
+          ssh sg-deploy "test -d '$WP_ROOT' && echo 'site root exists' || (echo '::error::site root missing'; exit 1)"
+          ssh sg-deploy "test -d '$WP_ROOT/wp-content/themes' && echo 'themes dir exists' || (echo '::error::wp-content/themes missing'; exit 1)"
+
+      - name: Git delta - theme files changed in this commit
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --deepen=1 origin >/dev/null 2>&1 || true
+          if git rev-parse -q --verify HEAD^ >/dev/null; then
+            git diff --name-status --no-renames HEAD^ HEAD > "$RUNNER_TEMP/raw.txt"
+          else
+            : > "$RUNNER_TEMP/raw.txt"
+          fi
+          awk -v d="$THEME_DIR/" 'index($2, d) == 1' "$RUNNER_TEMP/raw.txt" > "$RUNNER_TEMP/delta.txt"
+          cat "$RUNNER_TEMP/delta.txt" || true
+          echo "theme delta: added=$(grep -c '^A' "$RUNNER_TEMP/delta.txt" || true) changed=$(grep -c '^M' "$RUNNER_TEMP/delta.txt" || true) deleted=$(grep -c '^D' "$RUNNER_TEMP/delta.txt" || true)"
+
+      - name: Preflight - rsync dry-run
+        run: |
+          set -euo pipefail
+          rsync -az --checksum --no-times --omit-dir-times --dry-run --itemize-changes \
+            --exclude=node_modules/ \
+            -e "ssh -F $HOME/.ssh/config" \
+            "./$THEME_DIR/" "sg-deploy:$WP_ROOT/$THEME_DIR/"
+
+      - name: Apply deletions - theme files deleted in git are removed from the server
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          [ -s "$RUNNER_TEMP/delta.txt" ] || { echo "no theme delta - nothing to delete"; exit 0; }
+          while IFS=$'\t' read -r st path; do
+            [ "$st" = "D" ] || continue
+            target="$WP_ROOT/$path"
+            if ssh -o BatchMode=yes sg-deploy "test -e '$target'"; then
+              ssh -o BatchMode=yes sg-deploy "rm -f -- '$target'"
+              echo "REMOVED  $path"
+            else
+              echo "ABSENT   $path"
+            fi
+          done < "$RUNNER_TEMP/delta.txt"
+
+      - name: Deploy (rsync, no --delete)
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          rsync -az --checksum --no-times --omit-dir-times --stats \
+            --exclude=node_modules/ \
+            -e "ssh -F $HOME/.ssh/config" \
+            "./$THEME_DIR/" "sg-deploy:$WP_ROOT/$THEME_DIR/"
+
+      - name: Verify over SSH (repo hash vs server hash)
+        if: ${{ github.event_name == 'push' || inputs.dry_run_only == false }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/verify.txt"
+          rsync -rlc --dry-run --itemize-changes \
+            --exclude=node_modules/ \
+            -e "ssh -F $HOME/.ssh/config" \
+            "./$THEME_DIR/" "sg-deploy:$WP_ROOT/$THEME_DIR/" > "$out" || true
+          if grep -qE '^[<>ch]' "$out"; then
+            echo "::error::server still differs from repo after deploy"
+            awk '/^[<>ch]/{print; n++} n>=20{exit}' "$out"
+            exit 1
+          fi
+
+          f="$THEME_DIR/style.css"
+          [ -f "$f" ] || f="$(git ls-files "$THEME_DIR" | sed -n '1p')"
+          a=$(git show "HEAD:$f" | sha256sum | cut -d' ' -f1)
+          b=$(ssh sg-deploy "sha256sum '$WP_ROOT/$f' 2>/dev/null | cut -d' ' -f1" || true)
+          printf '  %-56s repo=%.16s  server=%.16s\n' "$f" "$a" "$b"
+          [ "$a" = "$b" ] || { echo "::error::spot-check hash mismatch"; exit 1; }
+          echo "OK - every deployed theme file matches the repo by checksum (verified over SSH)."
+
+      - name: Upload deploy log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-log-production
+          path: |
+            ${{ runner.temp }}/verify.txt
+            ${{ runner.temp }}/delta.txt
+          if-no-files-found: ignore
+          retention-days: 7
