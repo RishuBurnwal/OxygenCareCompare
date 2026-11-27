@@ -149,6 +149,8 @@ jobs:
             HostName $SSH_HOST
             Port $PORT
             User $SSH_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
             UserKnownHostsFile ~/.ssh/known_hosts
             StrictHostKeyChecking yes
           EOF
