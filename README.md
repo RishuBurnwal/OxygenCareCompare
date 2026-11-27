@@ -1,36 +1,82 @@
 # CompareOxygenConcentrators.com
 
-Independent WordPress research and comparison platform for portable oxygen concentrators. The theme handles presentation; the core plugin provides structured model records, fact-level sourcing, comparisons, awards, metadata, and schema.
+An independent, source-backed research and comparison platform for **portable oxygen
+concentrators (POCs)** — built as a WordPress site with a purpose-written theme and core
+plugin. Every published specification is tied to a manufacturer source and a verification
+date, so the site can make claims a comparison shopper can actually check.
 
-## Current status
+| | |
+|---|---|
+| **Live site** | <https://anuranjanv19.sg-host.com> |
+| **Repository** | `RishuBurnwal/OxygenCareCompare` (private) |
+| **Platform** | WordPress 6.6+ on PHP 8.3 |
+| **Theme** | `compareoxygen` 1.0.0 |
+| **Core plugin** | `coc-core` 0.2.0 |
 
-The site is implemented and running locally. Docker Desktop never became available (`npipe:////./pipe/dockerDesktopLinuxEngine`), so verification uses a portable PHP 8.3.37 + WordPress 7.1.5 + SQLite stack in `.local/`.
+> The intended public domain (`compareoxygenconcentrators.com`) is referenced in the theme
+> header but is not yet pointed at this deployment.
 
-- Design system: `DESIGN_SYSTEM.md`
-- Final verification: `FINAL_QA_REPORT.md`
-- Persistent QA evidence: `project-audit/qa-2026-11-24/`
-- Open launch decisions: `DECISIONS_REQUIRED.md`
+---
 
-Latest QA: 28 browser scenarios passed, 22 axe-core scans returned zero violations, 29 internal links checked with zero broken, 60 responsive overflow checks passed, and all five manufacturer source URLs returned HTTP 200.
+## What the site does
 
-## Architecture
+- **Model records** for each concentrator: weight, dimensions, oxygen delivery, battery
+  runtime, noise, warranty and other specification groups — each field captured with its own
+  source URL and verification date.
+- **Head-to-head comparisons** between two reviewed models, generated from the structured
+  records rather than hand-written prose.
+- **Editorial awards** and brand/use-case taxonomies.
+- **Structured data** (JSON-LD) and metadata derived from the same records, so search and
+  social previews never drift from the page content.
+- Anything not backed by a source is rendered as **“Not confirmed.”** — no invented specs,
+  ratings, or hands-on claims.
 
-- `wp-content/themes/compareoxygen/` — templates, design tokens, responsive CSS, and vanilla JavaScript.
-- `wp-content/plugins/coc-core/` — `poc_model` and `poc_comparison` content types, brand/use-case taxonomies, fact-level sources and verification dates, comparison logic, awards, metadata, and JSON-LD.
-- `.local/` — portable local runtime, router, seed content, and repair scripts. Not part of the deployable theme/plugin.
-- `compose.yaml` — an optional WordPress + MariaDB definition; it is not the verified runtime in this workspace.
+## Repository layout
 
-The product uses WordPress, PHP, and vanilla JavaScript only. No React, Vue, TypeScript, Node product runtime, WooCommerce, Elementor, or page builder is involved. Node/Playwright appear only in the external QA harness.
+```
+wp-content/
+  themes/compareoxygen/     Presentation: templates, design tokens, responsive CSS, vanilla JS
+  plugins/coc-core/         Content model: poc_model, poc_comparison, brands, use cases,
+                            fact-level sources, comparison logic, awards, metadata, JSON-LD
+docs & reports              Design, architecture, QA and decision records (see below)
+main.py                     Local launcher menu (start / stop / status / restart)
+.github/workflows/          GitHub Actions deployment pipeline
+LICENSE                     Proprietary licence — see the end of this file
+```
 
-## Local setup
+## Architecture at a glance
 
-From the project root, run:
+**Theme — `compareoxygen`.** Server-rendered PHP templates, one design-token file
+(`style.css`), progressive-enhancement JavaScript. No React, Vue, TypeScript, WooCommerce,
+Elementor or any page builder. Front-end assets ship as-is; there is no build step.
+
+**Plugin — `coc-core`.** Owns the data layer:
+
+| Piece | Purpose |
+|---|---|
+| `poc_model` | One record per concentrator, with grouped specification fields |
+| `poc_comparison` | Two reviewed models, compared from their records |
+| `poc_brand`, `poc_use_case` | Taxonomies for filtering and grouping |
+| Fact-level sources | Each specification carries a source URL + verification date |
+| `coc_awards` | Editorial award options that must link to a published model |
+| JSON-LD / meta | Generated from the same records — one source of truth |
+
+The separation is deliberate: content outlives design. A redesign touches the theme only;
+adding a specification group touches the plugin only.
+
+## Requirements
+
+- **Production:** WordPress 6.6+, PHP 8.3+, MySQL/MariaDB, HTTPS, a caching layer, backups.
+- **Local:** the repository ships a portable PHP 8.3 + WordPress + SQLite stack in `.local/`
+  (not tracked by git), so no Docker or web server is needed.
+
+## Local development
 
 ```powershell
 python main.py
 ```
 
-The launcher shows a numbered menu:
+The launcher offers a numbered menu:
 
 ```text
 1. Start and open in browser
@@ -41,74 +87,113 @@ The launcher shows a numbered menu:
 0. Exit
 ```
 
-Choose a number and press Enter. Start waits for WordPress and opens `http://localhost:8080/` when option 1 is selected. The direct commands (`python main.py up --no-browser`, `status`, `stop`, `restart`) remain available for scripts.
+Option 1 waits for WordPress to answer and opens <http://localhost:8080/>. Non-interactive
+equivalents (`python main.py up --no-browser`, `status`, `stop`, `restart`) exist for
+scripts. The launcher records the PHP process in `.local/server.pid` and writes output to
+`.local/server.log` and `.local/server.err`. It also registers a local-only mu-plugin that
+disables WP-Cron loopbacks, which would otherwise stall PHP’s single-threaded server.
 
-The launcher records the PHP process in `.local/server.pid` and writes server output to `.local/server.log` and `.local/server.err`. It also installs a local-only mu-plugin that disables WP-Cron loopbacks, which would otherwise stall PHP's single-threaded development server; run scheduled tasks manually with WP-CLI when needed. The admin is at `http://localhost:8080/wp-admin/`; the account is local-only and its credentials are intentionally not stored in this README.
-
-WP-CLI is invoked from `.local/wordpress`:
+WP-CLI runs from `.local/wordpress`:
 
 ```powershell
 ..\php\php.exe ..\wp-cli.phar <command>
 ```
 
-The seed source is `.local/seed.php`. Targeted corrections are in `.local/fix-*.php`. The SQLite database and portable PHP build are local conveniences, not a production deployment.
+Seed content lives in `.local/seed.php`; targeted corrections in `.local/fix-*.php`. The
+SQLite database and portable PHP build are local conveniences — never part of a deployment.
 
 ## Editorial workflow
 
-Create model records under **Oxygen concentrator models** and enter only source-backed fields with a source URL and verification date. Use the classic editor for review prose. Empty or unverified values display as “Not confirmed.” Create comparison records only after both model records are reviewed, then select the two models in the comparison meta box. Awards are editorial options stored in `coc_awards` and must link to published model records.
+1. Create a **model record** and enter only source-backed values, each with its source URL
+   and verification date.
+2. Review the record; unverified or empty values display as “Not confirmed.”
+3. Publish a **comparison** only once both models are reviewed.
+4. Attach **awards** only to published model records.
 
-Do not publish invented specifications, ratings, hands-on testing claims, OCS links, or analytics IDs.
+Do not publish invented specifications, ratings, hands-on testing claims, unapproved
+retailer links, or analytics IDs.
 
-## Before production
+## Quality and verification
 
-1. Replace `http://localhost:8080` with the production domain and run a serialized search-replace.
-2. Configure MySQL/MariaDB, HTTPS, transactional email, caching, and backups on a supported web server.
-3. Supply approved Oxygen Care Supply destinations, phone behavior, and tracking parameters.
-4. Supply GA4/GTM IDs and the consent approach.
-5. Obtain legal/editorial sign-off and complete a manual screen-reader pass.
-6. Decide whether the current 36-URL quality-first scope is the launch scope or whether more MVP pages will be authored.
+Latest full pass (see `FINAL_QA_REPORT.md`):
 
-See `DECISIONS_REQUIRED.md` and `FINAL_QA_REPORT.md` for detail.
+- 28 browser scenarios across desktop and mobile
+- 22 axe-core accessibility scans with zero violations
+- 29 internal links checked, zero broken
+- 60 responsive overflow checks
+- All five manufacturer source URLs returning HTTP 200
 
-## Deploy (GitHub Actions → server)
+## Deployment
 
-`.github/workflows/deploy-siteground.yml` syncs **only** `wp-content/themes/compareoxygen`
-to the server over SSH + `rsync` (`--checksum`, never `--delete`; deletions come from the
-git diff of the pushed commit).
+`.github/workflows/deploy-siteground.yml` publishes the theme over SSH + `rsync`.
 
-| Branch | Target | Secret holding the web root |
+| Branch | Target | Web root secret |
 |---|---|---|
-| `main` | staging | `DEPLOY_PATH` |
+| `main` | staging (when enabled) | `DEPLOY_PATH` |
 | `production` | live site | `DEPLOY_PATH_PROD` |
 
-Each run: checkout → verify secrets → guard the target path → install the deploy key and
-pin the host key → verify SSH → compute the theme delta → rsync dry-run → apply deletions
-→ rsync → verify by checksum over SSH → keep the log as a build artifact.
+Every run: checkout → verify secrets → guard the target path → install the deploy key and
+pin the host key → verify SSH → compute the theme delta for this commit → `rsync` dry-run →
+apply deletions → `rsync` → verify checksums over SSH → upload the log as an artifact.
 
-WordPress core, `wp-admin`, `wp-includes`, `wp-content/plugins`, `wp-content/uploads`,
-`wp-config.php` and the SQLite database are never touched by a deploy.
+**Safety guarantees**
 
-Repository secrets:
+- Only `wp-content/themes/compareoxygen` is ever written. WordPress core, `wp-admin`,
+  `wp-includes`, plugins, uploads, `wp-config.php` and the database are untouched.
+- `rsync` runs with `--checksum` and **without `--delete`**: a file that did not change is
+  never re-uploaded or modified, and an empty checkout cannot wipe the site.
+- Deletions come exclusively from the git diff of the pushed commit.
+- The target path must end in `/public_html`, must not contain `crm`, and staging and
+  production roots must differ — a bad secret cannot deploy to the wrong place.
+- The host key is pinned by fingerprint, and the private key is passphrase-protected: it is
+  loaded into a per-job `ssh-agent`, never written unencrypted to a long-lived file.
 
-| Secret | Meaning |
+**Repository secrets**
+
+| Secret | Purpose |
 |---|---|
-| `SSH_HOST` | server hostname |
-| `SSH_PORT` | SSH port (SiteGround: 18765) |
-| `SSH_USER` | SSH user from Site Tools → SSH Keys Manager → SSH Credentials |
-| `SSH_PRIVATE_KEY` | private half of the deploy key (passphrase-protected) |
-| `SSH_KEY_PASSPHRASE` | passphrase of `SSH_PRIVATE_KEY`; the key is loaded into a per-job ssh-agent |
-| `SSH_KNOWN_HOSTS`, `SSH_KNOWN_HOSTS_FINGERPRINT` | pinned host key, so a rebuilt or impersonated host is refused |
-| `DEPLOY_PATH` | staging web root; must end in `/public_html` and contain `staging` |
-| `DEPLOY_PATH_PROD` | live web root; must end in `/public_html` |
+| `SSH_HOST`, `SSH_PORT`, `SSH_USER` | Server connection details |
+| `SSH_PRIVATE_KEY` | Passphrase-protected deploy key (public half authorised on the server) |
+| `SSH_KEY_PASSPHRASE` | Passphrase for the deploy key |
+| `SSH_KNOWN_HOSTS`, `SSH_KNOWN_HOSTS_FINGERPRINT` | Pinned host key |
+| `DEPLOY_PATH` | Staging web root |
+| `DEPLOY_PATH_PROD` | Live web root |
 
-The guards refuse a path that is not a `public_html`, that mixes staging and production,
-or that contains `crm`.
+**Staging is switched off** until a staging site exists: the repository variable
+`STAGING_ENABLED` must be `true` (and `DEPLOY_PATH` must point at the staging docroot).
+Until then, `main` pushes skip the job instead of failing.
 
-Manual run: Actions → *Deploy to server on code update* → Run workflow → pick `target`;
-leave `dry_run_only` on for a preview that changes nothing.
+**Manual run:** Actions → *Deploy to server on code update* → *Run workflow* → choose the
+target; leave `dry_run_only` on for a preview that changes nothing.
 
-Staging is switched off until a staging site exists: the repository variable
-`STAGING_ENABLED` must be `true` for the `main` → staging job to run (set it with
-`gh variable set STAGING_ENABLED --body true`, and point `DEPLOY_PATH` at the staging
-docroot). Until then `main` pushes skip the job instead of failing.
+## Before public launch
 
+1. Point the production domain at the site and run a serialized search-replace from
+   `http://localhost:8080`.
+2. Configure transactional email, caching and backup retention on the server.
+3. Supply approved retailer destinations, phone behaviour and tracking parameters.
+4. Supply GA4/GTM IDs and the consent approach.
+5. Obtain legal/editorial sign-off and complete a manual screen-reader pass.
+6. Confirm whether the current 36-URL quality-first scope is the launch scope.
+
+See `DECISIONS_REQUIRED.md` and `FINAL_QA_REPORT.md` for the detail behind each item.
+
+## Documentation
+
+| File | Contents |
+|---|---|
+| `TECHNICAL_ARCHITECTURE.md` | System design, data model, rendering flow |
+| `DESIGN_SYSTEM.md` | Tokens, typography, components, spacing rules |
+| `IMPLEMENTATION_PLAN.md` | Build plan and sequencing |
+| `FINAL_QA_REPORT.md` | Final verification results and evidence |
+| `QA_TEST_PLAN.md` | Scenario and accessibility test plan |
+| `PROJECT_AUDIT.md` | Audit of the build against requirements |
+| `DECISIONS_REQUIRED.md` | Open launch decisions awaiting sign-off |
+| `EOD_REPORT.md` | Build-session reporting |
+
+## License
+
+**Proprietary — all rights reserved.** Copyright © 2026 Oxygen Care Supply. The theme,
+plugin, documentation and assets in this repository may not be copied, modified,
+distributed or used without written permission. Third-party components, where present,
+remain under their own licences. See [`LICENSE`](LICENSE) for the full notice.
