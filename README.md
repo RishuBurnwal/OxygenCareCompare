@@ -95,7 +95,8 @@ Repository secrets:
 | `SSH_HOST` | server hostname |
 | `SSH_PORT` | SSH port (SiteGround: 18765) |
 | `SSH_USER` | SSH user from Site Tools → SSH Keys Manager → SSH Credentials |
-| `SSH_PRIVATE_KEY` | private half of the deploy key (public half imported on the server) |
+| `SSH_PRIVATE_KEY` | private half of the deploy key (passphrase-protected) |
+| `SSH_KEY_PASSPHRASE` | passphrase of `SSH_PRIVATE_KEY`; the key is loaded into a per-job ssh-agent |
 | `SSH_KNOWN_HOSTS`, `SSH_KNOWN_HOSTS_FINGERPRINT` | pinned host key, so a rebuilt or impersonated host is refused |
 | `DEPLOY_PATH` | staging web root; must end in `/public_html` and contain `staging` |
 | `DEPLOY_PATH_PROD` | live web root; must end in `/public_html` |
@@ -105,4 +106,9 @@ or that contains `crm`.
 
 Manual run: Actions → *Deploy to server on code update* → Run workflow → pick `target`;
 leave `dry_run_only` on for a preview that changes nothing.
+
+Staging is switched off until a staging site exists: the repository variable
+`STAGING_ENABLED` must be `true` for the `main` → staging job to run (set it with
+`gh variable set STAGING_ENABLED --body true`, and point `DEPLOY_PATH` at the staging
+docroot). Until then `main` pushes skip the job instead of failing.
 
