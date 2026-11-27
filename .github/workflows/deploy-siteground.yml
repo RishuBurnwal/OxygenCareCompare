@@ -17,6 +17,7 @@ on:
       - '.github/**'
       - 'docs/**'
       - 'qa/**'
+      - 'LICENSE'
       - '**/*.md'
   workflow_dispatch:
     inputs:
