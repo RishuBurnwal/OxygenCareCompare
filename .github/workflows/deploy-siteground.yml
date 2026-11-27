@@ -67,10 +67,11 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
         run: |
           set -euo pipefail
           missing=""
-          for v in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY; do
+          for v in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY SSH_KEY_PASSPHRASE; do
             if [ -z "${!v:-}" ]; then missing="$missing $v"; fi
           done
           if [ -n "$missing" ]; then
@@ -101,6 +102,7 @@ jobs:
       - name: Install deploy SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -111,6 +113,19 @@ jobs:
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
+          # The deploy key is passphrase-protected, so it is loaded into a
+          # per-job ssh-agent. The passphrase lives in its own secret and is
+          # only ever read by the askpass helper, which is deleted right after.
+          cat > ~/.ssh/askpass.sh <<'ASKPASS'
+          #!/bin/sh
+          printf '%s' "$SSH_KEY_PASSPHRASE"
+          ASKPASS
+          chmod 700 ~/.ssh/askpass.sh
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          SSH_ASKPASS="$HOME/.ssh/askpass.sh" SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key 2>/dev/null
+          rm -f ~/.ssh/askpass.sh
 
           PORT="${SSH_PORT:-18765}"
           if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
@@ -132,8 +147,6 @@ jobs:
             HostName $SSH_HOST
             Port $PORT
             User $SSH_USER
-            IdentityFile ~/.ssh/deploy_key
-            IdentitiesOnly yes
             UserKnownHostsFile ~/.ssh/known_hosts
             StrictHostKeyChecking yes
           EOF
@@ -266,10 +279,11 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
         run: |
           set -euo pipefail
           missing=""
-          for v in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY; do
+          for v in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY SSH_KEY_PASSPHRASE; do
             if [ -z "${!v:-}" ]; then missing="$missing $v"; fi
           done
           if [ -n "$missing" ]; then
@@ -299,6 +313,7 @@ jobs:
       - name: Install deploy SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -309,6 +324,19 @@ jobs:
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
+          # The deploy key is passphrase-protected, so it is loaded into a
+          # per-job ssh-agent. The passphrase lives in its own secret and is
+          # only ever read by the askpass helper, which is deleted right after.
+          cat > ~/.ssh/askpass.sh <<'ASKPASS'
+          #!/bin/sh
+          printf '%s' "$SSH_KEY_PASSPHRASE"
+          ASKPASS
+          chmod 700 ~/.ssh/askpass.sh
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          SSH_ASKPASS="$HOME/.ssh/askpass.sh" SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key 2>/dev/null
+          rm -f ~/.ssh/askpass.sh
 
           PORT="${SSH_PORT:-18765}"
           if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
