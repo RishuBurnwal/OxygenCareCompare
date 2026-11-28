@@ -230,6 +230,16 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
 .utility-bar a { color: #dcecf3; text-decoration: none; }
 .utility-bar a:hover { color: var(--white); text-decoration: underline; }
 
+@media (max-width: 1200px) {
+  .utility-bar__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 0.1rem;
+    padding-block: 0.4rem;
+  }
+  .utility-bar p + p { align-self: flex-end; white-space: nowrap; }
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -1685,7 +1695,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
 
 @media (max-width: 760px) {
   body { font-size: 1.125rem; }
-  .utility-bar__inner { justify-content: center; }
+  .utility-bar__inner { justify-content: center; align-items: center; }
   .utility-bar__inner > *:last-child { display: none; }
   .hero h1 { font-size: clamp(2.225rem, 8vw, 2.925rem); }
   .product-grid, .award-grid, .guide-grid, .brand-grid { grid-template-columns: 1fr; }
