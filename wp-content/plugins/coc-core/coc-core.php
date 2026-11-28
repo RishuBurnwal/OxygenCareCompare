@@ -364,9 +364,9 @@ final class COC_Core {
         echo '<style>
         .coc-spec-table{width:100%;border-collapse:collapse;margin:8px 0 20px}
         .coc-spec-table th,.coc-spec-table td{border-bottom:1px solid #e2e6ea;padding:8px 6px;text-align:left;vertical-align:top}
-        .coc-spec-table th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#50575e}
+        .coc-spec-table th{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#50575e}
         .coc-spec-table input[type=text],.coc-spec-table input[type=url],.coc-spec-table input[type=date]{width:100%}
-        .coc-group-title{margin:22px 0 0;padding-top:14px;border-top:1px solid #dcdcde;font-size:14px}
+        .coc-group-title{margin:22px 0 0;padding-top:14px;border-top:1px solid #dcdcde;font-size:16px}
         .coc-help{max-width:760px;color:#50575e}
         </style>';
     }

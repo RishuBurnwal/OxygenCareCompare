@@ -167,7 +167,7 @@ $render_add_list = static function () use ($add_models, $models): void { ?>
                 <h2 id="comparison-heading" class="compare-table-title"><?php esc_html_e('Specification table', 'compareoxygen'); ?></h2>
                 <p class="muted small mb-0"><?php printf(esc_html(_n('%s published difference', '%s published differences', $differences, 'compareoxygen')), esc_html(number_format_i18n($differences))); ?><?php if ($verified) : ?> · <?php printf(esc_html__('checked %s', 'compareoxygen'), esc_html(compareoxygen_format_date($verified))); ?><?php endif; ?></p>
             <?php else : ?>
-                <h2 id="comparison-heading" class="clamp-mobile" style="margin:0 0 .2rem;font-size:1.45rem;"><?php echo esc_html(sprintf(__('%1$s vs %2$s', 'compareoxygen'), $first_post->post_title, $second_post->post_title)); ?></h2>
+                <h2 id="comparison-heading" class="clamp-mobile" style="margin:0 0 .2rem;font-size:1.575rem;"><?php echo esc_html(sprintf(__('%1$s vs %2$s', 'compareoxygen'), $first_post->post_title, $second_post->post_title)); ?></h2>
                 <p class="muted small mb-0"><?php printf(esc_html(_n('%s difference in published specifications', '%s differences in published specifications', $differences, 'compareoxygen')), esc_html(number_format_i18n($differences))); ?></p>
             <?php endif; ?>
         </div>
